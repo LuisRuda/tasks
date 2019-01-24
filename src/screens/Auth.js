@@ -22,73 +22,95 @@ export default class Auth extends Component {
         confirmPassword: ''
     }
 
-    signinOrSignup = async () => {
+    signin = async () => {
+        try {
+            const res = await axios.post(`${server}/signin`, {
+                email: this.state.email,
+                password: this.state.password,
+            })
+
+            axios.defaults.headers.common['Authorization'] = `bearer ${res.data.token}`
+
+            this.props.navigation.navigate('Home')
+        } catch (err) {
+            Alert.alert('Erro', 'Falha no login!')
+        }
+    }
+
+    signup = async () => {
+        try {
+            await axios.post(`${server}/signup`, {
+                name: this.state.name,
+                email: this.state.email,
+                password: this.state.password,
+                confirmPassword: this.state.confirmPassword
+            })
+
+            Alert.alert('Sucesso', 'Usuário cadastrado :)')
+            this.setState({ stageNew: false })
+        } catch (err) {
+            showError(err)
+        }
+    }
+
+    signinOrSignup = () => {
         if (this.state.stageNew) {
-            try {
-                await axios.post(`${server}/signup`, {
-                    name: this.state.name,
-                    email: this.state.email,
-                    password: this.state.password,
-                    confirmPassword: this.state.confirmPassword
-                })
-
-                Alert.alert('Sucesso', 'Usuário cadastrado :)')
-                this.setState({ stageNew: false })
-            } catch (err) {
-                showError(err)
-            }
+            this.signup()
         } else {
-            try {
-                const res = await axios.post(`${server}/signin`, {
-                    email: this.state.email,
-                    password: this.state.password,
-                })
-
-                axios.defaults.headers.common['Authorization'] = `bearer ${res.data.token}`
-
-                this.props.navigation.navigate('Home')
-            } catch (err) {
-                Alert.alert('Erro', 'Falha no login!')
-            }
+            this.signin()
         }
     }
 
     render() {
+        const validations = []
+
+        validations.push(this.state.email && this.state.email.includes('@'))
+        validations.push(this.state.password && this.state.password.length >= 6)
+
+        if (this.state.stageNew) {
+            validations.push(this.state.name && this.state.name.trim())
+            validations.push(this.state.confirmPassword)
+            validations.push(this.state.password === this.state.confirmPassword)
+        }
+
+        const validForm = validations.reduce((all, v) => all && v)
+
         return (
-            <ImageBackground source={backgroundImage} 
+            <ImageBackground source={backgroundImage}
                 style={styles.background}>
                 <Text style={styles.title}>Tasks</Text>
                 <View style={styles.formContainer}>
                     <Text style={styles.subtitle}>
-                        {this.state.stageNew ? 
+                        {this.state.stageNew ?
                             'Crie uma conta' : 'Informe seus dados'}
                     </Text>
                     {this.state.stageNew &&
-                        <AuthInput icon='user' placeholder='Nome' 
+                        <AuthInput icon='user' placeholder='Nome'
                             style={styles.input}
                             value={this.state.name}
-                            onChangeText={name => 
+                            onChangeText={name =>
                                 this.setState({ name })} />}
-                    <AuthInput icon='at' placeholder='E-mail' 
+                    <AuthInput icon='at' placeholder='E-mail'
                         style={styles.input}
                         value={this.state.email}
-                        onChangeText={email => 
+                        onChangeText={email =>
                             this.setState({ email })} />
-                    <AuthInput icon='lock' secureTextEntry={true} 
-                        placeholder='Senha' 
+                    <AuthInput icon='lock' secureTextEntry={true}
+                        placeholder='Senha'
                         style={styles.input}
                         value={this.state.password}
-                        onChangeText={password => 
+                        onChangeText={password =>
                             this.setState({ password })} />
                     {this.state.stageNew &&
-                        <AuthInput icon="asterisk" secureTextEntry={true} 
-                            placeholder='Confirmação' 
+                        <AuthInput icon="asterisk" secureTextEntry={true}
+                            placeholder='Confirmação'
                             style={styles.input}
                             value={this.state.confirmPassword}
-                            onChangeText={confirmPassword => 
+                            onChangeText={confirmPassword =>
                                 this.setState({ confirmPassword })} />}
-                    <TouchableOpacity onPress={this.signinOrSignup}>
-                        <View style={styles.button}>
+                    <TouchableOpacity disabled={!validForm}
+                        onPress={this.signinOrSignup}>
+                        <View style={[styles.button, !validForm ? { backgroundColor: '#aaa' } : {}]}>
                             <Text style={styles.buttonText}>
                                 {this.state.stageNew ? 'Registrar' : 'Entrar'}</Text>
                         </View>
@@ -115,7 +137,7 @@ const styles = StyleSheet.create({
         fontFamily: commomStyles.fontFamily,
         color: '#fff',
         fontSize: 70,
-        marginBottom : 10
+        marginBottom: 10
     },
     subtitle: {
         fontFamily: commomStyles.fontFamily,
@@ -138,7 +160,7 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     buttonText: {
-        fontFamily: commomStyles.fontFamily,    
+        fontFamily: commomStyles.fontFamily,
         color: '#fff',
         fontSize: 20
     }
